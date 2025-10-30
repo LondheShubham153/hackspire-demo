@@ -1,0 +1,26 @@
+[
+  {
+    "timestamp": "2025-10-30T07:49:29.882676",
+    "message": "this app is just awesome, i love it",
+    "sentiment_score": 1,
+    "sentiment_label": "positive"
+  },
+  {
+    "timestamp": "2025-10-30T07:49:46.014145",
+    "message": "this app is just boring, i don;t want to use it",
+    "sentiment_score": -1,
+    "sentiment_label": "negative"
+  },
+  {
+    "timestamp": "2025-10-30T07:49:59.540486",
+    "message": "its raining",
+    "sentiment_score": 0,
+    "sentiment_label": "neutral"
+  },
+  {
+    "timestamp": "2025-10-30T07:53:25.823025",
+    "message": "love this new fix, works for me",
+    "sentiment_score": 1,
+    "sentiment_label": "positive"
+  }
+]

@@ -53,25 +53,47 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Data persistence file
-DATA_FILE = 'sentiment_history.pkl'
+# Data persistence file - use absolute path
+try:
+    DATA_FILE = os.path.join(os.path.dirname(__file__), 'sentiment_history.pkl')
+except NameError:
+    # Fallback for when __file__ is not available (e.g., in some deployment contexts)
+    DATA_FILE = os.path.join(os.getcwd(), 'sentiment_history.pkl')
 
-@st.cache_data
 def load_history() -> List[Dict[str, Any]]:
     """Load analysis history from file"""
     try:
         if os.path.exists(DATA_FILE):
             with open(DATA_FILE, 'rb') as f:
-                return pickle.load(f)
-    except Exception:
-        pass
+                data = pickle.load(f)
+                # Convert string timestamps back to datetime objects if needed
+                for item in data:
+                    if isinstance(item.get('timestamp'), str):
+                        item['timestamp'] = datetime.fromisoformat(item['timestamp'])
+                return data
+    except Exception as e:
+        st.warning(f"Could not load history: {e}")
     return []
 
 def save_history() -> None:
     """Save analysis history to file"""
     try:
+        # Convert datetime objects to strings for JSON serialization
+        data_to_save = []
+        for item in st.session_state.history:
+            item_copy = item.copy()
+            if isinstance(item_copy.get('timestamp'), datetime):
+                item_copy['timestamp'] = item_copy['timestamp'].isoformat()
+            data_to_save.append(item_copy)
+        
         with open(DATA_FILE, 'wb') as f:
-            pickle.dump(st.session_state.history, f)
+            pickle.dump(st.session_state.history, f)  # Keep original datetime objects
+        
+        # Also save as JSON backup
+        json_file = DATA_FILE.replace('.pkl', '.json')
+        with open(json_file, 'w') as f:
+            json.dump(data_to_save, f, indent=2)
+            
     except Exception as e:
         st.error(f"Failed to save history: {e}")
 
@@ -109,11 +131,22 @@ def check_api_health() -> bool:
     except Exception:
         return False
 
-# Initialize session state
+# Initialize session state with persistent loading
 if 'history' not in st.session_state:
     st.session_state.history = load_history()
 if 'show_api_status' not in st.session_state:
     st.session_state.show_api_status = True
+if 'last_load_time' not in st.session_state:
+    st.session_state.last_load_time = datetime.now()
+if 'last_save_time' not in st.session_state:
+    st.session_state.last_save_time = None
+
+# Auto-reload history if file was modified externally (every 30 seconds)
+if (datetime.now() - st.session_state.last_load_time).seconds > 30:
+    current_history = load_history()
+    if len(current_history) != len(st.session_state.history):
+        st.session_state.history = current_history
+    st.session_state.last_load_time = datetime.now()
 
 def get_sentiment_color(score):
     """Return color based on sentiment score"""
@@ -207,6 +240,25 @@ with st.sidebar:
             st.plotly_chart(fig_trend, use_container_width=True)
     else:
         st.info("No analysis history yet")
+    
+    # Persistence status
+    st.markdown("---")
+    st.markdown("**💾 Data Status**")
+    
+    # Check if file exists
+    if os.path.exists(DATA_FILE):
+        file_size = os.path.getsize(DATA_FILE)
+        file_time = datetime.fromtimestamp(os.path.getmtime(DATA_FILE))
+        st.markdown(f"• File: {file_size} bytes")
+        st.markdown(f"• Modified: {file_time.strftime('%H:%M:%S')}")
+        st.markdown(f"• Records: {len(st.session_state.history)}")
+    else:
+        st.markdown("• No saved data yet")
+    
+    if 'last_save_time' in st.session_state and st.session_state.last_save_time:
+        st.markdown(f"• Last save: {st.session_state.last_save_time.strftime('%H:%M:%S')}")
+    else:
+        st.markdown("• No saves yet")
 
 # Main content
 col1, col2 = st.columns([2, 1])
@@ -235,13 +287,16 @@ with col1:
                 label = sentiment['label']
                 
                 # Add to history and save
-                st.session_state.history.append({
+                new_entry = {
                     'timestamp': datetime.now(),
                     'message': message,
                     'sentiment_score': score,
                     'sentiment_label': label
-                })
+                }
+                st.session_state.history.append(new_entry)
                 save_history()
+                st.session_state.last_save_time = datetime.now()
+                st.success("💾 Data saved successfully!")
                 
                 # Show result
                 st.success("Analysis Complete!")
@@ -293,11 +348,16 @@ with col2:
                     unsafe_allow_html=True
                 )
         
-        # Export and Clear buttons
-        col_btn1, col_btn2 = st.columns(2)
+        # Action buttons
+        col_btn1, col_btn2, col_btn3 = st.columns(3)
         
         with col_btn1:
-            if st.button("📥 Export CSV"):
+            if st.button("🔄 Refresh", help="Reload history from file"):
+                st.session_state.history = load_history()
+                st.rerun()
+        
+        with col_btn2:
+            if st.button("📥 Export", help="Export to CSV"):
                 csv_data = export_to_csv()
                 if csv_data:
                     st.download_button(
@@ -307,11 +367,26 @@ with col2:
                         mime="text/csv"
                     )
         
-        with col_btn2:
-            if st.button("🗑️ Clear History"):
-                st.session_state.history = []
-                save_history()
+        with col_btn3:
+            if st.button("🗑️ Clear", help="Clear all history"):
+                st.session_state.confirm_clear = True
                 st.rerun()
+        
+        # Confirmation dialog for clear
+        if st.session_state.get('confirm_clear', False):
+            st.warning("⚠️ Are you sure you want to clear all history?")
+            col_confirm1, col_confirm2 = st.columns(2)
+            with col_confirm1:
+                if st.button("✅ Yes, Clear All", type="primary"):
+                    st.session_state.history = []
+                    save_history()
+                    st.session_state.confirm_clear = False
+                    st.success("History cleared!")
+                    st.rerun()
+            with col_confirm2:
+                if st.button("❌ Cancel"):
+                    st.session_state.confirm_clear = False
+                    st.rerun()
     else:
         st.info("No recent analyses")
 
