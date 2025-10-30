@@ -8,7 +8,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 
-class WorkshopStack(Stack):
+class SentimentAnalysisStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -18,8 +18,8 @@ class WorkshopStack(Stack):
             self, "SentimentAnalysisFunction",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="sentiment_analysis.lambda_handler",
-            code=_lambda.Code.from_asset("lambda"),
-            function_name="SentimentAnalysisFunction",
+            code=_lambda.Code.from_asset("../lambda"),
+            function_name="SentimentAnalysisLambda",
             timeout=Duration.seconds(30)
         )
         
@@ -49,6 +49,10 @@ class WorkshopStack(Stack):
         
         # Add POST method for sentiment analysis
         api.root.add_method("POST", sentiment_integration)
+        
+        # Add health check endpoint
+        health_resource = api.root.add_resource("health")
+        health_resource.add_method("GET", sentiment_integration)
         
         # Output the API Gateway URL
         CfnOutput(
