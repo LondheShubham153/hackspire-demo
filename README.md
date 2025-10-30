@@ -1,56 +1,117 @@
-# 🎯 AI Sentiment Analysis API
+# 🎯 AI Sentiment Analysis Workshop
 
-A serverless sentiment analysis API built with AWS CDK, Lambda, and Bedrock. Analyzes text sentiment using Meta's Llama 3 8B model and returns structured results perfect for frontend integration.
-
-## 🚀 Features
-
-- **Real-time Sentiment Analysis** - Analyze tweets, comments, reviews, and feedback
-- **AI-Powered** - Uses Meta Llama 3 8B Instruct model via AWS Bedrock
-- **Serverless Architecture** - AWS Lambda + API Gateway for scalability
-- **Frontend-Ready** - Clean JSON responses with numeric scores and labels
-- **CORS Enabled** - Ready for web application integration
-- **Error Handling** - Comprehensive validation and error responses
-
-## 📊 Sentiment Scoring
-
-| Score | Label | Description |
-|-------|-------|-------------|
-| `1` | `positive` | Positive sentiment detected |
-| `0` | `neutral` | Neutral or mixed sentiment |
-| `-1` | `negative` | Negative sentiment detected |
+A complete serverless sentiment analysis application built with AWS Bedrock, Lambda, API Gateway, and Streamlit.
 
 ## 🏗️ Architecture
 
 ```
-Frontend → API Gateway → Lambda Function → AWS Bedrock (Llama 3) → Response
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Streamlit     │───▶│   API Gateway   │───▶│   AWS Lambda    │───▶│   AWS Bedrock   │
+│   Web App       │    │                 │    │                 │    │  (Llama 3 8B)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-## 🛠️ Tech Stack
+## 📁 Project Structure
 
-- **Infrastructure**: AWS CDK (Python)
-- **Compute**: AWS Lambda (Python 3.9)
-- **API**: Amazon API Gateway
-- **AI Model**: Meta Llama 3 8B Instruct (AWS Bedrock)
-- **Permissions**: AWS IAM
-
-## 📡 API Endpoint
-
-**Base URL**: `https://glb2onnqm8.execute-api.us-west-2.amazonaws.com/prod/`
-
-### POST /
-Analyze sentiment of a text message.
-
-**Request:**
-```json
-{
-  "message": "I love this product! It works amazingly well!"
-}
+```
+workshop/
+├── infrastructure/          # CDK Infrastructure as Code
+│   ├── app.py              # CDK App entry point
+│   ├── backend_stack.py    # CDK Stack definition
+│   ├── requirements.txt    # CDK dependencies
+│   └── cdk.json           # CDK configuration
+├── services/               # Microservices
+│   └── sentiment/         # Sentiment analysis service
+│       ├── config.py      # Service configuration
+│       ├── sentiment_analysis.py # Lambda handler
+│       └── utils.py       # Utility functions
+├── web/                   # Web application
+│   ├── app.py            # Streamlit application
+│   ├── config.py         # Web app configuration
+│   └── requirements.txt  # Web dependencies
+└── README.md             # This file
 ```
 
-**Response:**
+## 🚀 Features
+
+- **Real-time Sentiment Analysis**: Powered by Meta Llama 3 8B via AWS Bedrock
+- **Modern Web Interface**: Interactive Streamlit dashboard with analytics
+- **Serverless Architecture**: Scalable AWS Lambda backend
+- **Smart Caching**: Optimized performance with request caching
+- **Data Persistence**: Analysis history with export capabilities
+- **Health Monitoring**: API health checks and status indicators
+- **Responsive Design**: Modern UI with gradient themes and emojis
+
+## 🛠️ Prerequisites
+
+- AWS CLI configured with appropriate permissions
+- Node.js 18+ (for CDK)
+- Python 3.9+
+- AWS CDK v2 installed (`npm install -g aws-cdk`)
+
+## 📋 Required AWS Permissions
+
+Your AWS user/role needs the following permissions:
+- Bedrock model access (specifically Meta Llama models)
+- Lambda function creation and management
+- API Gateway creation and management
+- IAM role creation for Lambda
+- CloudFormation stack operations
+
+## 🔧 Installation & Deployment
+
+### 1. Clone and Setup
+
+```bash
+git clone <repository-url>
+cd workshop
+```
+
+### 2. Deploy Infrastructure
+
+```bash
+cd infrastructure
+pip install -r requirements.txt
+cdk bootstrap  # Only needed once per AWS account/region
+cdk deploy --require-approval never
+```
+
+Note the API Gateway URL from the deployment output.
+
+### 3. Update Web Configuration
+
+```bash
+cd ../web
+# Update config.py with your API Gateway URL
+echo 'API_ENDPOINT = "https://YOUR-API-ID.execute-api.REGION.amazonaws.com/prod/"' > config.py
+```
+
+### 4. Run Web Application
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+## 🧪 Testing
+
+### Test Service Directly
+
+```bash
+# Health check
+curl -X GET "https://YOUR-API-ID.execute-api.REGION.amazonaws.com/prod/health"
+
+# Sentiment analysis
+curl -X POST "https://YOUR-API-ID.execute-api.REGION.amazonaws.com/prod/" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "I love this product!"}'
+```
+
+### Expected Response
+
 ```json
 {
-  "message": "I love this product! It works amazingly well!",
+  "message": "I love this product!",
   "sentiment": {
     "score": 1,
     "label": "positive"
@@ -58,218 +119,91 @@ Analyze sentiment of a text message.
 }
 ```
 
-**Error Response:**
-```json
-{
-  "error": "Message cannot be empty"
-}
-```
+## 📊 Configuration
 
-## 🧪 Testing Examples
+### Service Configuration (`services/sentiment/config.py`)
 
-### Positive Sentiment
-```bash
-curl -X POST https://glb2onnqm8.execute-api.us-west-2.amazonaws.com/prod/ \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Amazing service! Highly recommend!"}'
-```
+- **BEDROCK_MODEL_ID**: Meta Llama 3 8B model identifier
+- **BEDROCK_REGION**: AWS region for Bedrock service
+- **MAX_MESSAGE_LENGTH**: Maximum input text length (5000 chars)
+- **LAMBDA_TIMEOUT**: Function timeout (30 seconds)
 
-### Negative Sentiment
-```bash
-curl -X POST https://glb2onnqm8.execute-api.us-west-2.amazonaws.com/prod/ \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Terrible experience. Very disappointed."}'
-```
+### Web Configuration (`web/config.py`)
 
-### Neutral Sentiment
-```bash
-curl -X POST https://glb2onnqm8.execute-api.us-west-2.amazonaws.com/prod/ \
-  -H "Content-Type: application/json" \
-  -d '{"message": "The weather is cloudy today."}'
-```
+- **API_ENDPOINT**: Your API Gateway endpoint URL
 
-## 🚀 Quick Start
+## 🎨 Web Features
 
-### Prerequisites
-- AWS CLI configured
-- Node.js 18+ and npm
-- Python 3.9+
-- AWS CDK CLI
+- **Sentiment Analysis**: Real-time text analysis with visual feedback
+- **Analytics Dashboard**: Pie charts and trend analysis
+- **History Tracking**: Persistent analysis history
+- **Data Export**: CSV export functionality
+- **Health Monitoring**: API status indicators
+- **Responsive Design**: Modern UI with custom CSS
 
-### Installation
+## 🔍 Sentiment Scoring
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd sentiment-analysis-api
-   ```
+- **Positive (1)**: 😊 Green gradient
+- **Neutral (0)**: 😐 Yellow gradient  
+- **Negative (-1)**: 😞 Red gradient
 
-2. **Install dependencies**
-   ```bash
-   npm install -g aws-cdk
-   pip install -r requirements.txt
-   ```
+## 🚨 Troubleshooting
 
-3. **Bootstrap CDK (first time only)**
-   ```bash
-   cdk bootstrap
-   ```
+### Common Issues
 
-4. **Deploy the stack**
-   ```bash
-   cdk deploy
-   ```
+1. **Bedrock Access Denied**
+   - Ensure your AWS account has Bedrock access enabled
+   - Check IAM permissions for Bedrock model access
 
-5. **Test the API**
-   ```bash
-   curl -X POST <your-api-url> \
-     -H "Content-Type: application/json" \
-     -d '{"message": "Hello world!"}'
-   ```
+2. **Lambda Timeout**
+   - Increase timeout in `infrastructure/backend_stack.py`
+   - Check Bedrock service availability
 
-## 📁 Project Structure
+3. **API Gateway CORS Issues**
+   - CORS headers are configured in `services/sentiment/config.py`
+   - Ensure OPTIONS method is handled
 
-```
-├── lambda/
-│   └── sentiment_analysis.py    # Lambda function code
-├── workshop/
-│   ├── __init__.py
-│   └── workshop_stack.py        # CDK infrastructure
-├── frontend/                    # Streamlit web app
-│   ├── app.py                   # Main Streamlit app
-│   ├── config.py                # API configuration
-│   ├── requirements.txt         # Frontend dependencies
-│   └── README.md                # Frontend documentation
-├── tests/                       # Unit tests
-├── app.py                       # CDK app entry point
-├── cdk.json                     # CDK configuration
-├── requirements.txt             # CDK dependencies
-├── README.md                    # This file
-└── .gitignore                   # Git ignore rules
-```
+4. **Web Connection Errors**
+   - Verify API endpoint URL in `web/config.py`
+   - Check API Gateway deployment status
 
-## 🔧 Development
+### Logs and Monitoring
 
-### Local Testing
-```bash
-# Synthesize CloudFormation template
-cdk synth
+- **Lambda Logs**: Check CloudWatch Logs for the Lambda function
+- **API Gateway Logs**: Enable logging in API Gateway console
+- **Web Logs**: Check browser console for client-side errors
 
-# Run tests
-python -m pytest tests/
+## 🧹 Cleanup
 
-# Deploy changes
-cdk deploy
-```
-
-### Environment Variables
-The Lambda function uses these AWS services:
-- `AWS_REGION` - Automatically set by Lambda
-- Bedrock model: `meta.llama3-8b-instruct-v1:0`
-
-## 🌐 Frontend Integration
-
-### JavaScript/React Example
-```javascript
-const analyzeSentiment = async (message) => {
-  try {
-    const response = await fetch('https://glb2onnqm8.execute-api.us-west-2.amazonaws.com/prod/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message })
-    });
-    
-    const result = await response.json();
-    
-    // Use result.sentiment.score (1, 0, -1)
-    // Use result.sentiment.label ("positive", "neutral", "negative")
-    
-    return result;
-  } catch (error) {
-    console.error('Sentiment analysis failed:', error);
-  }
-};
-```
-
-### Python Example
-```python
-import requests
-
-def analyze_sentiment(message):
-    url = "https://glb2onnqm8.execute-api.us-west-2.amazonaws.com/prod/"
-    payload = {"message": message}
-    
-    response = requests.post(url, json=payload)
-    return response.json()
-
-# Usage
-result = analyze_sentiment("I love this!")
-print(f"Sentiment: {result['sentiment']['label']} ({result['sentiment']['score']})")
-```
-
-## 🔒 Security & Permissions
-
-- **IAM Roles**: Least privilege access to Bedrock models
-- **CORS**: Enabled for web applications
-- **Input Validation**: Message length and content validation
-- **Error Handling**: No sensitive information in error responses
-
-## 💰 Cost Optimization
-
-- **Serverless**: Pay only for requests processed
-- **Efficient Model**: Uses Llama 3 8B (no marketplace fees)
-- **Short Timeout**: 30-second Lambda timeout
-- **Minimal Tokens**: Optimized prompts for quick responses
-
-## 🖥️ Frontend Application
-
-A beautiful Streamlit web interface is included:
+To avoid AWS charges, clean up resources:
 
 ```bash
-# Run the frontend
-cd frontend
-pip install -r requirements.txt
-streamlit run app.py
+cd infrastructure
+cdk destroy
 ```
 
-**Frontend Features:**
-- 🎯 Single text analysis
-- 📊 Batch processing
-- 📈 Real-time analytics
-- 📱 Responsive design
-- 🎨 Color-coded results
-- 📝 Analysis history
+## 📝 Development Notes
 
-## 🚧 Roadmap
-
-- [x] Frontend web application
-- [x] Batch processing endpoint
-- [ ] Confidence scores
-- [ ] Multi-language support
-- [ ] Caching layer
-- [ ] Rate limiting
+- The Lambda function uses Python 3.9 runtime
+- Bedrock requests are configured with low temperature (0.1) for consistent results
+- Text sanitization removes HTML entities and control characters
+- Response caching improves performance for repeated queries
 
 ## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests
+4. Test thoroughly
 5. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-## 🆘 Support
+## 🙏 Acknowledgments
 
-For issues and questions:
-- Create an issue in this repository
-- Check AWS Bedrock documentation
-- Review CDK documentation
-
----
-
-**Built with ❤️ using AWS CDK and Meta Llama 3**
+- AWS Bedrock team for the foundation model access
+- Meta for the Llama 3 8B model
+- Streamlit team for the excellent web framework
+- AWS CDK team for infrastructure as code capabilities

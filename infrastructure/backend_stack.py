@@ -18,7 +18,7 @@ class SentimentAnalysisStack(Stack):
             self, "SentimentAnalysisFunction",
             runtime=_lambda.Runtime.PYTHON_3_9,
             handler="sentiment_analysis.lambda_handler",
-            code=_lambda.Code.from_asset("../lambda"),
+            code=_lambda.Code.from_asset("../services/sentiment"),
             function_name="SentimentAnalysisLambda",
             timeout=Duration.seconds(30)
         )
